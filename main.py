@@ -6,7 +6,7 @@ def main():
     env = gym.make('gym_TLMN-v0')
     env.reset()
 
-    for i in range(200):
+    for i in range(100):
         env.render()
         o,a,done,t = env.step(env.turn.action(deepcopy(env.state)))
         if done:
