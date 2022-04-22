@@ -11,7 +11,7 @@ def main():
         o,a,done,t = env.step(env.turn.action(deepcopy(env.state)))
         if done:
             break
-        
+
         
 
 if __name__ == '__main__':
