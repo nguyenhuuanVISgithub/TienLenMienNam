@@ -6,7 +6,7 @@ class Agent(Player):
         super().__init__(name)
 
     def action(self, state):
-        mode = 2 # 1,2,3,4
+        mode = 1 # 1,2,3,4
 
         if mode == 1: # Tự tìm các bộ bài có thể chặt và đánh, nếu không chặt được thì bỏ vòng
             available_action_space = self.get_available_action(state['board'].set_of_cards[0], state['board'].set_of_cards[1], state['board'].set_of_cards[2], state['cur_player_cards'])
