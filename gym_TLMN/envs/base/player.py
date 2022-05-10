@@ -46,7 +46,7 @@ class Player:
                         if temp_list.__len__() > 0:
                             possible_action_space[possible_hand_name] = temp_list.copy()
                     else:
-                        possible_action_space[possible_hand_name] = action_space[possible_hand_name]
+                        possible_action_space[possible_hand_name] = action_space[possible_hand_name].copy()
 
             return possible_action_space
         
@@ -66,7 +66,7 @@ class Player:
                     if temp_list.__len__() > 0:
                         possible_action_space[possible_hand_name] = temp_list.copy()
                 else:
-                    possible_action_space[possible_hand_name] = action_space[possible_hand_name]
+                    possible_action_space[possible_hand_name] = action_space[possible_hand_name].copy()
 
         return possible_action_space
 

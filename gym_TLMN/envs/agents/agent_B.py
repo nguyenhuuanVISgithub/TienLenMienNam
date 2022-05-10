@@ -8,7 +8,7 @@ class Agent(Player):
         super().__init__(name)
 
     def action(self, dict_input):
-        mode = 5
+        mode = 2
         
         action_space = self.action_space(dict_input['Turn_player_cards'])
         print(Fore.LIGHTWHITE_EX + 'Tất cả: ', end='')
