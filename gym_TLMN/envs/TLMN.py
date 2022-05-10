@@ -139,6 +139,10 @@ class TLMN_Env(gym.Env):
             if action_player in self.dict_input['List_index_action']:
                 list_card = list_possible_action_space[self.dict_input['List_index_action'].index(action_player)]['list_card']
                 self.process(list_card)
+            
+            else:
+                print(Fore.LIGHTRED_EX + ' action đầu vào không thể thực hiện trên bàn chơi hiện tại', end='')
+                print(Style.RESET_ALL)
         
         else:
             print(Fore.LIGHTRED_EX + ' đầu vào sai: ' + str(action_player))
