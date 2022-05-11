@@ -112,6 +112,9 @@ class TLMN_Env(gym.Env):
 
     def step(self, st):
         self.dict_input['State'] = self.state()
+        print(self.state()[:52], 'Các lá bài đã lộ')
+        print(self.state()[52:104], 'Các lá bài cần phải chặn')
+        print(self.state()[104:156], 'Các lá bài của người chơi hiện tại')
         if max(self.dict_input['Close_game']) == 1:
             self.process([])
 
