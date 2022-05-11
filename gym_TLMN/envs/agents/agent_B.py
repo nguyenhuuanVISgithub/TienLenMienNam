@@ -8,27 +8,27 @@ class Agent(Player):
         super().__init__(name)
 
     def action(self, dict_input):
-        mode = 2
+        mode = 5
         
-        action_space = self.action_space(dict_input['Turn_player_cards'])
+        possible_action = self.possible_action(dict_input['Turn_player_cards'])
         print(Fore.LIGHTWHITE_EX + 'Tất cả: ', end='')
-        for key in action_space:
-            print(Fore.LIGHTWHITE_EX + key, Fore.LIGHTGREEN_EX + str(action_space[key].__len__()), end=', ')
+        for key in possible_action:
+            print(Fore.LIGHTWHITE_EX + key, Fore.LIGHTGREEN_EX + str(possible_action[key].__len__()), end=', ')
         
         print(Style.RESET_ALL)
 
-        possible_action_space = self.possible_action_space(dict_input['Turn_player_cards'], dict_input['Board'].turn_cards, dict_input['Board'].turn_cards_owner)
+        action_space = self.action_space(dict_input['Turn_player_cards'], dict_input['Board'].turn_cards, dict_input['Board'].turn_cards_owner)
         print(Fore.LIGHTWHITE_EX + 'Có thể đánh: ', end='')
-        for key in possible_action_space:
-            print(Fore.LIGHTWHITE_EX + key, Fore.LIGHTGREEN_EX + str(possible_action_space[key].__len__()), end=', ')
+        for key in action_space:
+            print(Fore.LIGHTWHITE_EX + key, Fore.LIGHTGREEN_EX + str(action_space[key].__len__()), end=', ')
 
         print(Style.RESET_ALL)
         
         if mode == 1:
             
             list_possible_action = []
-            for key in possible_action_space:
-                list_possible_action += possible_action_space[key]
+            for key in action_space:
+                list_possible_action += action_space[key]
 
             random.shuffle(list_possible_action)
             action = random.choice(list_possible_action)
@@ -37,8 +37,8 @@ class Agent(Player):
 
         if mode == 2:
             list_action = []
-            for key in action_space:
-                list_action += action_space[key]
+            for key in possible_action:
+                list_action += possible_action[key]
 
             random.shuffle(list_action)
             action = random.choice(list_action)
@@ -59,4 +59,6 @@ class Agent(Player):
             return [random.choice(dict_input['Turn_player_cards']) for i in range(k)]
 
         if mode == 5:
+            print(dict_input['List_index_action'])
+            print(self.list_index_action(dict_input['State'], dict_input['List_all_action_code']))
             return random.choice(dict_input['List_index_action'])

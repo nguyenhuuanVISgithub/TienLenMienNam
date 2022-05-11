@@ -1,3 +1,7 @@
+from colorama import Fore
+from gym_TLMN.envs.base.card import Card
+
+
 class Player:
     def __init__(self, name: str):
         self.__name = name
@@ -18,12 +22,131 @@ class Player:
     def amount_cards_remaining(self):
         return 13 - self.__played_cards.__len__()
 
-    def possible_action_space(self, list_card: list, board_turn_cards: dict, board_turn_cards_owner: str):
-        action_space = self.action_space(list_card)
-        possible_action_space = {}
+    def list_index_action(self, state: list, list_all_action_code: list):
+        action_space = self.get_action_space_from_state(state)
+        list_action_space = []
+        for key in action_space:
+            list_action_space += action_space[key]
+
+        list_action_code = []
+        for action in list_action_space:
+            hand_name = action['hand_name']
+            hand_score = action['hand_score']
+            list_action_code.append(f'{hand_name}_{hand_score}')
+
+        return [list_all_action_code.index(action_code) for action_code in list_action_code]
+
+    def get_action_space_from_state(self, state: list):
+        board_turn_cards_ = state[52:104]
+        my_cards_ = state[104:156]
+        my_id_ = state[156]
+        turn_cards_owner_id_ = state[165]
+
+        board_list_card = [Card(i) for i in range(52) if board_turn_cards_[i] == 1]
+        my_list_card = [Card(i) for i in range(52) if my_cards_[i] == 1]
+        
+        if my_id_ == turn_cards_owner_id_ or board_list_card.__len__() == 0:
+            return self.action_space(
+                list_card = my_list_card,
+                board_turn_cards = {
+                    'list_card': [], 'hand_name': 'Nothing', 'hand_score': -1
+                },
+                board_turn_cards_owner = self.name
+            )
+
+        else:
+            check_, score = self.check_action(board_list_card)
+            if check_ == 'Error_input':
+                print(Fore.LIGHTRED_EX + 'State đầu vào của hàm get_action bị sai')
+                return self.action_space(
+                    list_card = [],
+                    board_turn_cards = {
+                        'list_card': [], 'hand_name': 'Nothing', 'hand_score': -1
+                    },
+                    board_turn_cards_owner = 'NotMe123456'
+                )
+            else:
+                return self.action_space(
+                    list_card = my_list_card,
+                    board_turn_cards = {
+                        'list_card': board_list_card, 'hand_name': check_, 'hand_score': score
+                    },
+                    board_turn_cards_owner = 'NotMe123456'
+                )
+
+    def check_action(self, action_player: list):
+        len_ = action_player.__len__()
+        if len_ == 0:
+            return 'Nothing', -1
+
+        v_list = [i.score for i in action_player]
+        val_list = [i.stt for i in action_player]
+
+        # Kiểm tra xem có 2 lá bài nào trùng hay không
+        temp_list = []
+        for i in val_list:
+            if i in temp_list:
+                # print(Fore.LIGHTRED_EX + 'Có hai thẻ bài trùng nhau: ', end='')
+                # for i in action_player:
+                #     print(Fore.RED + str(i.name) + ', ', end='')
+
+                # print(Style.RESET_ALL)
+                return 'Error_input', -7
+            
+            temp_list.append(i)
+
+        # Kiểm tra xem các lá bài có phải của người chơi hiện tại không
+        # temp_list = [i.stt for i in self.dict_input['Turn_player_cards']]
+        # for i in val_list:
+        #     if i not in temp_list:
+        #         print(Fore.LIGHTRED_EX + 'Có ít nhất 1 thẻ bài không phải của người chơi hiện tại: ', end='')
+        #         for i in action_player:
+        #             print(Fore.RED + str(i.name) + ', ', end='')
+
+        #         print(Style.RESET_ALL)
+        #         return 'Error_input', -7
+
+        if len_ == 1:
+            return 'Single', action_player[0].stt
+
+        if len_ == 2:
+            if self.list_card_hand(action_player, 'Pair').__len__() != 0:
+                return 'Pair', max(val_list)
+
+            #print(Fore.LIGHTRED_EX + 'Dạng bài không đúng: ', end='')
+            # for i in action_player:
+            #     print(Fore.RED + str(i.name) + ', ', end='')
+
+            # print(Style.RESET_ALL)
+            return 'Error_input', -7
+
+        # Kiểm tra xem có phải là sảnh
+        if max(v_list) - min(v_list) == (len_-1) and max(v_list) != 12:
+            if self.list_card_hand(action_player, f'{len_}_straight').__len__() != 0:
+                return f'{len_}_straight', max(val_list)
+
+        # Kiểm tra xem có phải bộ ba hoặc tứ quý
+        if max(v_list) == min(v_list):
+            return f'{len_}_of_a_kind', max(val_list)
+
+        # Kiểm tra dây đôi thông
+        if len_ % 2 == 0 and len_ >= 6:
+            if self.list_card_hand(action_player, f'{len_//2}_pairs_straight').__len__() != 0:
+                return f'{len_//2}_pairs_straight', max(val_list)
+
+        # print(Fore.LIGHTRED_EX + 'Dạng bài không đúng: ', end='')
+        # for i in action_player:
+        #     print(Fore.RED + str(i.name) + ', ', end='')
+
+        # print(Style.RESET_ALL)
+        return 'Error_input', -7
+
+    def action_space(self, list_card: list, board_turn_cards: dict, board_turn_cards_owner: str):
+        possible_action = self.possible_action(list_card)
+        action_space = {}
 
         if board_turn_cards['hand_name'] == 'Nothing' or board_turn_cards_owner == self.name:
-            return action_space
+            return possible_action
 
         list_possible_hand_name = ['Nothing']
         if board_turn_cards['hand_name'] in ['Single', 'Pair', '3_of_a_kind']\
@@ -40,15 +163,15 @@ class Player:
                     pass
 
             for possible_hand_name in list_possible_hand_name:
-                if possible_hand_name in action_space.keys():
+                if possible_hand_name in possible_action.keys():
                     if possible_hand_name == board_turn_cards['hand_name']:
-                        temp_list = [action for action in action_space[possible_hand_name] if action['hand_score'] > board_turn_cards['hand_score']]
+                        temp_list = [action for action in possible_action[possible_hand_name] if action['hand_score'] > board_turn_cards['hand_score']]
                         if temp_list.__len__() > 0:
-                            possible_action_space[possible_hand_name] = temp_list.copy()
+                            action_space[possible_hand_name] = temp_list.copy()
                     else:
-                        possible_action_space[possible_hand_name] = action_space[possible_hand_name].copy()
+                        action_space[possible_hand_name] = possible_action[possible_hand_name].copy()
 
-            return possible_action_space
+            return action_space
         
         if board_turn_cards['hand_name'] == '3_pairs_straight':
             list_possible_hand_name += [f'{k}_pairs_straight' for k in [3,4]] + ['4_of_a_kind']
@@ -60,18 +183,18 @@ class Player:
             pass
 
         for possible_hand_name in list_possible_hand_name:
-            if possible_hand_name in action_space.keys():
+            if possible_hand_name in possible_action.keys():
                 if possible_hand_name == board_turn_cards['hand_name']:
-                    temp_list = [action for action in action_space[possible_hand_name] if action['hand_score'] > board_turn_cards['hand_score']]
+                    temp_list = [action for action in possible_action[possible_hand_name] if action['hand_score'] > board_turn_cards['hand_score']]
                     if temp_list.__len__() > 0:
-                        possible_action_space[possible_hand_name] = temp_list.copy()
+                        action_space[possible_hand_name] = temp_list.copy()
                 else:
-                    possible_action_space[possible_hand_name] = action_space[possible_hand_name].copy()
+                    action_space[possible_hand_name] = possible_action[possible_hand_name].copy()
 
-        return possible_action_space
+        return action_space
 
-    def action_space(self, list_card: list):
-        action_space = {}
+    def possible_action(self, list_card: list):
+        possible_action = {}
         list_hand_name = ['Nothing', 'Single', 'Pair']\
                         + [f'{k}_of_a_kind' for k in [3,4]]\
                         + [f'{k}_pairs_straight' for k in [3,4]]\
@@ -80,9 +203,9 @@ class Player:
         for hand_name in list_hand_name:
             list_action = self.list_card_hand(list_card, hand_name)
             if list_action.__len__() != 0:
-                action_space[hand_name] = list_action.copy()
+                possible_action[hand_name] = list_action.copy()
             
-        return action_space
+        return possible_action
 
     def list_card_hand(self, list_card: list, hand_name: str):
         list_return = []

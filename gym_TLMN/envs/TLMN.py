@@ -35,6 +35,7 @@ class TLMN_Env(gym.Env):
 
         self.turn = random.choice(self.players)
         self.p_name_victory = 'None'
+
         self.dict_input = {
             'Board': self.board,
             'Player': self.players,
@@ -42,7 +43,9 @@ class TLMN_Env(gym.Env):
             'Turn_id': self.players.index(self.turn),
             'Turn_player_cards': [],
             'List_index_action': [],
-            'State': []
+            'State': [],
+            'Close_game': [0 for i in range(amount_player)],
+            'List_all_action_code': []
         }
 
         self.setup_board()
@@ -104,66 +107,98 @@ class TLMN_Env(gym.Env):
         print_horizontal_lines()
         print_list_card(self.dict_input['Turn_player_cards'])
 
+    def step(self, list_all_action_code: list):
+        self.dict_input['List_all_action_code'] = list_all_action_code
+        if max(self.dict_input['Close_game']) == 1:
+            self.process([])
 
-    def step(self, list_all_action_code):
-        possible_action_space = self.admin.possible_action_space(self.players_cards[self.turn.name], self.board.turn_cards, self.board.turn_cards_owner)
-        list_possible_action_space = []
-        for key in possible_action_space:
-            list_possible_action_space += possible_action_space[key]
-        
-        # list_action_code = [f'{action['hand_name']}_{action['hand_score']}' for for action in list_possible_action_space]
-        list_action_code = []
-        for action in list_possible_action_space:
-            hand_name = action['hand_name']
-            hand_score = action['hand_score']
-            list_action_code.append(f'{hand_name}_{hand_score}')
+            return self, None, True, None
 
-        self.dict_input['List_index_action'] = [list_all_action_code.index(action_code) for action_code in list_action_code]
-        self.dict_input['State'] = self.state()
-        action_player = self.turn.action(self.dict_input)
-        if type(action_player) == list:
-            self.process(action_player)
-        elif type(action_player) == int:
-            # print(self.dict_input['State'])
-            # (self.dict_input['List_index_action'])
-            # print(action_player)
-            # print_list_card(list_possible_action_space[self.dict_input['List_index_action'].index(action_player)]['list_card'])
-            if action_player in self.dict_input['List_index_action']:
-                list_card = list_possible_action_space[self.dict_input['List_index_action'].index(action_player)]['list_card']
-                self.process(list_card)
-            else:
-                print(Fore.LIGHTRED_EX + ' action đầu vào không thể thực hiện trên bàn chơi hiện tại', end='')
-                print(Style.RESET_ALL)
         else:
-            print(Fore.LIGHTRED_EX + ' đầu vào sai: ' + str(action_player))
-            print(Style.RESET_ALL)
-        
-        done = self.close()
-        if done:
-            print_horizontal_lines()
-            print(Fore.LIGHTYELLOW_EX + 'Chúc mừng ' + str(self.p_name_victory)+' là người chiến thắng', end='')
-            print(Style.RESET_ALL)
+            action_space = self.admin.action_space(self.players_cards[self.turn.name], self.board.turn_cards, self.board.turn_cards_owner)
+            list_action_space = []
+            for key in action_space:
+                list_action_space += action_space[key]
 
-        return self, None, done, None
+            list_action_code = []
+            for action in list_action_space:
+                hand_name = action['hand_name']
+                hand_score = action['hand_score']
+                list_action_code.append(f'{hand_name}_{hand_score}')
+
+            self.dict_input['List_index_action'] = [list_all_action_code.index(action_code) for action_code in list_action_code]
+            self.dict_input['State'] = self.state()
+            action_player = self.turn.action(self.dict_input)
+
+            if type(action_player) == list:
+                self.process(action_player)
+            elif type(action_player) == int:
+                print(self.dict_input['State'], self.dict_input['State'].__len__())
+                if action_player in self.dict_input['List_index_action']:
+                    list_card = list_action_space[self.dict_input['List_index_action'].index(action_player)]['list_card']
+                    self.process(list_card)
+                else:
+                    print(Fore.LIGHTRED_EX + ' action đầu vào không thể thực hiện trên bàn chơi hiện tại', end='')
+                    print(Style.RESET_ALL)
+            else:
+                print(Fore.LIGHTRED_EX + ' đầu vào sai: ' + str(action_player))
+                print(Style.RESET_ALL)
+            
+            done = self.close()
+            if done:
+                print_horizontal_lines()
+                print(Fore.LIGHTYELLOW_EX + 'Chúc mừng ' + str(self.p_name_victory)+' là người chiến thắng', end='')
+                print(Style.RESET_ALL)
+
+                self.dict_input['Close_game'] = [1 if player.amount_cards_remaining == 0 else 0 for player in self.players]
+                print(self.dict_input['Close_game'])
+                print([player.name for player in self.players])
+
+            return self, None, done, None
 
     def state(self):
-        # Kí tự đầu: số thẻ bài còn thừa trên bàn
-        state = []
-        state.append(self.board._Board__hidden_cards.__len__())
-        # 52 kí tự sau: Các lá bài đã được người chơi đánh ra
+        # Các lá bài đã đánh trên bàn : 0 51
         list_played_card = [card.stt for card in self.board.played_cards]
-        temp = [1 if i in list_played_card else 0 for i in range(52)]
-        state += temp
-        # 3 kí tự tiếp theo, lần lượt số lá bài còn lại của 3 người chơi đối thủ, nếu có ít hơn 4 người chơi thì coi như có 1 số người ko đánh quân bài nào
-        temp = [13 for i in range(4)]
-        for i in range(self.players.__len__()):
-            temp[i] = self.players[i].amount_cards_remaining
-        
-        temp.remove(temp[self.players.index(self.turn)])
-        state += temp
-        return state
+        temp_1 = [1 if i in list_played_card else 0 for i in range(52)]
 
-    def process(self, action_player):
+        # Các lá bài hiện tại cần phải chặn 52 103
+        list_turn_card = [card.stt for card in self.board.turn_cards['list_card']]
+        temp_2 = [1 if i in list_turn_card else 0 for i in range(52)]
+
+        # Các lá bài của người chơi hiện tại 104 155
+        turn_player_cards = [card.stt for card in self.players_cards[self.turn.name]]
+        temp_3 = [1 if i in turn_player_cards else 0 for i in range(52)]
+
+        # Id của người chơi hiện tại 156
+        turn_id = self.players.index(self.turn)
+
+        # 4 pt, số lá bài còn lại của các người chơi theo góc nhìn agent 157 160
+        temp_4_ = [9999 for i in range(4)]
+        for i in range(self.players.__len__()):
+            temp_4_[i] = self.players[i].amount_cards_remaining
+        
+        temp_4 = temp_4_[turn_id:] + temp_4_[:turn_id]
+
+        # 4 pt, tình trạng theo vòng hoặc bỏ vòng của các người chơi theo góc nhìn agent 161 164
+        temp_5_ = [0 for i in range(4)]
+        for i in self.dict_input['Playing_current_round']:
+            temp_5_[i] = 1
+
+        temp_5 = temp_5_[turn_id:] + temp_5_[:turn_id]
+
+        # Id của người chơi đang là chủ nhân của các lá bài cần chặn trên bàn 165
+        temp_6 = None
+        if self.board.turn_cards_owner == 'None':
+            temp_6 = -1
+        else:
+            for i in range(self.players.__len__()):
+                if self.players[i].name == self.board.turn_cards_owner:
+                    temp_6 = i
+                    break
+
+        return temp_1 + temp_2 + temp_3 + [turn_id] + temp_4 + temp_5 + [temp_6]
+
+    def process(self, action_player: list):
         check_, score = self.check_action(action_player)
         val_list_action = [i.stt for i in action_player]
 
@@ -182,30 +217,39 @@ class TLMN_Env(gym.Env):
                     print(Fore.LIGHTCYAN_EX + self.turn.name + Fore.LIGHTYELLOW_EX + ' đánh bài lỗi nên mất quyền khởi đầu vòng', end='')
                 
                 print(Style.RESET_ALL)
+
                 # Thay đổi thẻ trên bàn chơi
                 self.board._Board__turn_cards = {'list_card': [], 'hand_name': 'Nothing', 'hand_score': -1}
                 self.board._Board__turn_cards_owner = 'None'
+
             else: # Đầu vào đúng
                 print(Fore.LIGHTCYAN_EX + self.turn.name + Fore.LIGHTGREEN_EX + ' khởi đầu vòng mới với: ', end='')
                 print_list_card_(action_player, check_)
+
                 # Cập nhật các lá bài của người vừa đánh bài
                 self.players_cards[self.turn.name] = [i for i in self.dict_input['Turn_player_cards'] if i.stt not in val_list_action]
+
                 # Thêm vào list các thẻ đã đánh
                 self.players[self.dict_input['Turn_id']]._Player__played_cards += action_player
                 self.board._Board__played_cards += action_player
+
                 # Thay đổi thẻ trên bàn chơi
                 self.board._Board__turn_cards = {'list_card': action_player.copy(), 'hand_name': check_, 'hand_score': score}
                 self.board._Board__turn_cards_owner = self.turn.name
             
             # Tất cả người chơi được thêm lại vào vòng
             self.dict_input['Playing_current_round'] = [i for i in range(self.players.__len__())]
+
             # Người đi tiếp theo
             self.dict_input['Turn_id'] = (self.dict_input['Turn_id'] + 1) % self.players.__len__()
             self.turn = self.players[self.dict_input['Turn_id']]
+
             # Truyền các lá bài của người tiếp theo vào state
             self.dict_input['Turn_player_cards'] = self.players_cards[self.turn.name]
+
         else: # Không phải khởi đầu vòng mới
             elimination = None # True: bị loại khỏi vòng vì lí do nào đó, False: chặt được nên không bị loại khỏi vòng
+
             # Không đánh gì hoặc đầu vào lỗi
             if check_ == 'Nothing' or check_ == 'Error_input':
                 if check_ == 'Nothing':
@@ -215,6 +259,7 @@ class TLMN_Env(gym.Env):
                     
                 print(Style.RESET_ALL)
                 elimination = True
+
             # Đánh đúng, cùng loại với bài hiện tại
             elif check_ == self.board.turn_cards['hand_name']:
                 if score < self.board.turn_cards['hand_score']:
@@ -223,11 +268,13 @@ class TLMN_Env(gym.Env):
                     elimination = True
                 else:
                     elimination = False
+
             # Đánh đúng, khác loại với bài hiện tại
             else:
                 # 3 đôi thông chặt được 1 con 2
                 if check_ == '3_pairs_straight' and self.board.turn_cards['hand_name'] == 'Single' and self.board.turn_cards['hand_score'] >= 48:
                     elimination = False
+
                 # Tứ quý chặt được 1 hoặc đôi 2, 3 đôi thông
                 elif check_ == '4_of_a_kind':
                     # 1 hoặc đôi 2
@@ -239,6 +286,7 @@ class TLMN_Env(gym.Env):
 
                     else:
                         elimination = True
+
                 # 4 đôi thông chặt được 1 hoặc đôi 2, tứ quý, 3 đôi thông
                 elif check_ == '4_pairs_straight':
                     # 1 hoặc đôi 2
@@ -260,26 +308,33 @@ class TLMN_Env(gym.Env):
                 if (check_ != 'Nothing') and (check_ != 'Error_input') and check_ != self.board.turn_cards ['hand_name']:
                     print(Fore.LIGHTCYAN_EX + self.turn.name + Fore.LIGHTYELLOW_EX + ' chặt bài không phù hợp nên bị loại khỏi vòng: ', end='')
                     print_list_card_(action_player, check_)
+
                 # Bỏ người chơi này khỏi vòng
                 indexx = self.dict_input['Playing_current_round'].index(self.dict_input['Turn_id'])
                 self.dict_input['Playing_current_round'].remove(self.dict_input['Turn_id'])
+
                 # Xác định người đi tiếp theo
                 self.dict_input['Turn_id'] = self.dict_input['Playing_current_round'][indexx % self.dict_input['Playing_current_round'].__len__()]
                 self.turn = self.players[self.dict_input['Turn_id']]
+
                 # Truyền vào các lá bài của người tiếp theo vào
                 self.dict_input['Turn_player_cards'] = self.players_cards[self.turn.name]
 
             else: # Chặt được bài trên bàn
                 print(Fore.LIGHTCYAN_EX + self.turn.name + Fore.LIGHTGREEN_EX + ' chặt bài với: ', end='')
                 print_list_card_(action_player, check_)
+
                 # Cập nhật các lá bài của người vừa đánh bài
                 self.players_cards[self.turn.name] = [i for i in self.dict_input['Turn_player_cards'] if i.stt not in val_list_action]
+
                 # Thêm vào list các thẻ đã đánh
                 self.players[self.dict_input['Turn_id']]._Player__played_cards += action_player
                 self.board._Board__played_cards += action_player
+
                 # Thay đổi thẻ trên bàn chơi
                 self.board._Board__turn_cards = {'list_card': action_player.copy(), 'hand_name': check_, 'hand_score': score}
                 self.board._Board__turn_cards_owner = self.turn.name
+
                 # Nếu bài vừa đánh ra liên quan đến các là '2' hoặc dây đôi thông, tứ quý thì tất cả người chơi được thêm lại vào vòng
                 if score >= 48 or check_ in ['4_of_a_kind', '3_pairs_straight', '4_pairs_straight']:
                     self.dict_input['Playing_current_round'] = [i for i in range(self.players.__len__())]
@@ -288,16 +343,18 @@ class TLMN_Env(gym.Env):
                 indexx = self.dict_input['Playing_current_round'].index(self.dict_input['Turn_id'])
                 self.dict_input['Turn_id'] = self.dict_input['Playing_current_round'][(indexx+1) % self.dict_input['Playing_current_round'].__len__()]
                 self.turn = self.players[self.dict_input['Turn_id']]
+
                 # Truyền vào các lá bài của người tiếp theo vào
                 self.dict_input['Turn_player_cards'] = self.players_cards[self.turn.name]
 
-    def check_action(self, action_player):
+    def check_action(self, action_player: list):
         len_ = action_player.__len__()
         if len_ == 0:
             return 'Nothing', -1
 
         v_list = [i.score for i in action_player]
         val_list = [i.stt for i in action_player]
+
         # Kiểm tra xem có 2 lá bài nào trùng hay không
         temp_list = []
         for i in val_list:
@@ -310,6 +367,7 @@ class TLMN_Env(gym.Env):
                 return 'Error_input', -7
             
             temp_list.append(i)
+
         # Kiểm tra xem các lá bài có phải của người chơi hiện tại không
         temp_list = [i.stt for i in self.dict_input['Turn_player_cards']]
         for i in val_list:
