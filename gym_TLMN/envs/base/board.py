@@ -1,6 +1,3 @@
-from copy import deepcopy
-
-
 class Board:
     def __init__(self):
         self.__hidden_cards = []
@@ -18,7 +15,7 @@ class Board:
 
     @property
     def turn_cards(self):
-        return deepcopy(self.__turn_cards)
+        return self.__turn_cards
 
     @property
     def turn_cards_owner(self):

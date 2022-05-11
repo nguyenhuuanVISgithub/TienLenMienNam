@@ -21,8 +21,8 @@ class Player:
     @property
     def amount_cards_remaining(self):
         return 13 - self.__played_cards.__len__()
-
-    def list_index_action(self, state: list, list_all_action_code: list):
+    
+    def get_list_index_action(self, state: list, list_all_action_code: list):
         action_space = self.get_action_space_from_state(state)
         list_action_space = []
         for key in action_space:
@@ -44,37 +44,34 @@ class Player:
 
         board_list_card = [Card(i) for i in range(52) if board_turn_cards_[i] == 1]
         my_list_card = [Card(i) for i in range(52) if my_cards_[i] == 1]
-        
+
         if my_id_ == turn_cards_owner_id_ or board_list_card.__len__() == 0:
             return self.action_space(
-                list_card = my_list_card,
-                board_turn_cards = {
-                    'list_card': [], 'hand_name': 'Nothing', 'hand_score': -1
-                },
-                board_turn_cards_owner = self.name
+                my_list_card,
+                {'list_card': [], 'hand_name': 'Nothing', 'hand_score': -1},
+                self.name,
+                self.name
             )
 
+        check_, score = self.check_hand_card(board_list_card)
+        if check_ == 'Error_input':
+            print(Fore.LIGHTRED_EX + 'State đầu vào của hàm get_action bị sai')
+            return self.action_space(
+                [],
+                {'list_card': [], 'hand_name': 'Nothing', 'hand_score': -1},
+                'NotMe123456',
+                self.name
+            )
+        
         else:
-            check_, score = self.check_action(board_list_card)
-            if check_ == 'Error_input':
-                print(Fore.LIGHTRED_EX + 'State đầu vào của hàm get_action bị sai')
-                return self.action_space(
-                    list_card = [],
-                    board_turn_cards = {
-                        'list_card': [], 'hand_name': 'Nothing', 'hand_score': -1
-                    },
-                    board_turn_cards_owner = 'NotMe123456'
-                )
-            else:
-                return self.action_space(
-                    list_card = my_list_card,
-                    board_turn_cards = {
-                        'list_card': board_list_card, 'hand_name': check_, 'hand_score': score
-                    },
-                    board_turn_cards_owner = 'NotMe123456'
-                )
+            return self.action_space(
+                my_list_card,
+                {'list_card': board_list_card, 'hand_name': check_, 'hand_score': score},
+                'NotMe123456',
+                self.name
+            )
 
-    def check_action(self, list_card: list):
+    def check_hand_card(self, list_card: list):
         len_ = list_card.__len__()
         if len_ == 0:
             return 'Nothing', -1
@@ -115,11 +112,11 @@ class Player:
 
         return 'Error_input', -7
 
-    def action_space(self, list_card: list, board_turn_cards: dict, board_turn_cards_owner: str):
+    def action_space(self, list_card: list, board_turn_cards: dict, board_turn_cards_owner: str, turn_name: str):
         possible_action = self.possible_action(list_card)
         action_space = {}
 
-        if board_turn_cards['hand_name'] == 'Nothing' or board_turn_cards_owner == self.name:
+        if board_turn_cards['hand_name'] == 'Nothing' or board_turn_cards_owner == turn_name:
             return possible_action
 
         list_possible_hand_name = ['Nothing']
@@ -288,12 +285,5 @@ class Player:
             sub_list = list_int[i:i+k]
             if max(sub_list) - min(sub_list) == k-1:
                 list_return.append(sub_list)
-
-        return list_return
-
-    def convert_list_card_to_list_dict(self, list_card: list):
-        list_return = []
-        for card in list_card:
-            list_return.append(card.convert_to_dict())
 
         return list_return

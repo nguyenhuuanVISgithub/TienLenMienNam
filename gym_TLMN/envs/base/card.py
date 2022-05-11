@@ -1,6 +1,3 @@
-from copy import deepcopy
-
-
 class Card:
     def __init__(self, stt: int):
         name = ''
@@ -54,9 +51,9 @@ class Card:
         return self.card_type
 
     def convert_to_dict(self):
-        return deepcopy({
+        return {
             'stt': self.__stt,
             'name': self.__name,
             'score': self.__score,
             'card_type': self.__card_type
-        })
+        }

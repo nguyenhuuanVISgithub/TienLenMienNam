@@ -1,6 +1,7 @@
 from colorama import Fore, Style
 import gym
 import random
+import pandas
 from copy import deepcopy
 from gym_TLMN.envs.base.board import Board
 from gym_TLMN.envs.base.card import Card
@@ -16,7 +17,6 @@ def print_list_card(list_card: list):
         print(Fore.LIGHTWHITE_EX + list_card[i].name, end=', ')
         
     print(Style.RESET_ALL)
-
 
 
 class TLMN_Env(gym.Env):
@@ -36,16 +36,18 @@ class TLMN_Env(gym.Env):
         self.turn = random.choice(self.players)
         self.p_name_victory = 'None'
 
+        data = pandas.read_csv('gym_TLMN/envs/action_space.csv')
+        list_all_action_code = list(data['action_code'])
+
         self.dict_input = {
             'Board': self.board,
             'Player': self.players,
             'Playing_current_round': [i for i in range(amount_player)],
             'Turn_id': self.players.index(self.turn),
             'Turn_player_cards': [],
-            'List_index_action': [],
             'State': [],
             'Close_game': [0 for i in range(amount_player)],
-            'List_all_action_code': []
+            'List_all_action_code': list_all_action_code
         }
 
         self.setup_board()
@@ -89,6 +91,7 @@ class TLMN_Env(gym.Env):
 
         self.board._Board__hidden_cards = hidden_cards[total_play_cards:]
         self.dict_input['Turn_player_cards'] = self.players_cards[self.turn.name]
+        self.dict_input['State'] = self.state()
         print_horizontal_lines()
 
     def close(self):
@@ -107,43 +110,45 @@ class TLMN_Env(gym.Env):
         print_horizontal_lines()
         print_list_card(self.dict_input['Turn_player_cards'])
 
-    def step(self, list_all_action_code: list):
-        self.dict_input['List_all_action_code'] = list_all_action_code
+    def step(self, st):
+        self.dict_input['State'] = self.state()
         if max(self.dict_input['Close_game']) == 1:
             self.process([])
 
             return self, None, True, None
 
         else:
-            action_space = self.admin.action_space(self.players_cards[self.turn.name], self.board.turn_cards, self.board.turn_cards_owner)
-            list_action_space = []
+            action_space = self.admin.action_space(self.players_cards[self.turn.name], self.board.turn_cards, self.board.turn_cards_owner, self.turn.name)
+            list_action = []
             for key in action_space:
-                list_action_space += action_space[key]
+                list_action += action_space[key]
 
             list_action_code = []
-            for action in list_action_space:
+            for action in list_action:
                 hand_name = action['hand_name']
                 hand_score = action['hand_score']
                 list_action_code.append(f'{hand_name}_{hand_score}')
 
-            self.dict_input['List_index_action'] = [list_all_action_code.index(action_code) for action_code in list_action_code]
-            self.dict_input['State'] = self.state()
+            list_index_action = [self.dict_input['List_all_action_code'].index(action_code) for action_code in list_action_code]
+            print(list_index_action)
+            print(list_action_code)
             action_player = self.turn.action(self.dict_input)
 
             if type(action_player) == list:
                 self.process(action_player)
             elif type(action_player) == int:
-                print(self.dict_input['State'], self.dict_input['State'].__len__())
-                if action_player in self.dict_input['List_index_action']:
-                    list_card = list_action_space[self.dict_input['List_index_action'].index(action_player)]['list_card']
+                if action_player in list_index_action:
+                    list_card = list_action[list_index_action.index(action_player)]['list_card']
                     self.process(list_card)
                 else:
-                    print(Fore.LIGHTRED_EX + ' action đầu vào không thể thực hiện trên bàn chơi hiện tại', end='')
+                    print(Fore.LIGHTRED_EX + 'Action đầu vào không có trong danh sách các action có thể thực hiện', end='')
                     print(Style.RESET_ALL)
+                    self.process([])
+                
             else:
-                print(Fore.LIGHTRED_EX + ' đầu vào sai: ' + str(action_player))
+                print(Fore.LIGHTRED_EX + 'Kiểu trả ra sai: ' + str(action_player))
                 print(Style.RESET_ALL)
-            
+
             done = self.close()
             if done:
                 print_horizontal_lines()
@@ -155,48 +160,6 @@ class TLMN_Env(gym.Env):
                 print([player.name for player in self.players])
 
             return self, None, done, None
-
-    def state(self):
-        # Các lá bài đã đánh trên bàn : 0 51
-        list_played_card = [card.stt for card in self.board.played_cards]
-        temp_1 = [1 if i in list_played_card else 0 for i in range(52)]
-
-        # Các lá bài hiện tại cần phải chặn 52 103
-        list_turn_card = [card.stt for card in self.board.turn_cards['list_card']]
-        temp_2 = [1 if i in list_turn_card else 0 for i in range(52)]
-
-        # Các lá bài của người chơi hiện tại 104 155
-        turn_player_cards = [card.stt for card in self.players_cards[self.turn.name]]
-        temp_3 = [1 if i in turn_player_cards else 0 for i in range(52)]
-
-        # Id của người chơi hiện tại 156
-        turn_id = self.players.index(self.turn)
-
-        # 4 pt, số lá bài còn lại của các người chơi theo góc nhìn agent 157 160
-        temp_4_ = [9999 for i in range(4)]
-        for i in range(self.players.__len__()):
-            temp_4_[i] = self.players[i].amount_cards_remaining
-        
-        temp_4 = temp_4_[turn_id:] + temp_4_[:turn_id]
-
-        # 4 pt, tình trạng theo vòng hoặc bỏ vòng của các người chơi theo góc nhìn agent 161 164
-        temp_5_ = [0 for i in range(4)]
-        for i in self.dict_input['Playing_current_round']:
-            temp_5_[i] = 1
-
-        temp_5 = temp_5_[turn_id:] + temp_5_[:turn_id]
-
-        # Id của người chơi đang là chủ nhân của các lá bài cần chặn trên bàn 165
-        temp_6 = None
-        if self.board.turn_cards_owner == 'None':
-            temp_6 = -1
-        else:
-            for i in range(self.players.__len__()):
-                if self.players[i].name == self.board.turn_cards_owner:
-                    temp_6 = i
-                    break
-
-        return temp_1 + temp_2 + temp_3 + [turn_id] + temp_4 + temp_5 + [temp_6]
 
     def process(self, action_player: list):
         check_, score = self.check_action(action_player)
@@ -346,6 +309,48 @@ class TLMN_Env(gym.Env):
 
                 # Truyền vào các lá bài của người tiếp theo vào
                 self.dict_input['Turn_player_cards'] = self.players_cards[self.turn.name]
+
+    def state(self):
+        # Các lá bài đã đánh trên bàn : 0 51
+        list_played_card = [card.stt for card in self.board.played_cards]
+        temp_1 = [1 if i in list_played_card else 0 for i in range(52)]
+
+        # Các lá bài hiện tại cần phải chặn 52 103
+        list_turn_card = [card.stt for card in self.board.turn_cards['list_card']]
+        temp_2 = [1 if i in list_turn_card else 0 for i in range(52)]
+
+        # Các lá bài của người chơi hiện tại 104 155
+        turn_player_cards = [card.stt for card in self.players_cards[self.turn.name]]
+        temp_3 = [1 if i in turn_player_cards else 0 for i in range(52)]
+
+        # Id của người chơi hiện tại 156
+        turn_id = self.players.index(self.turn)
+
+        # 4 pt, số lá bài còn lại của các người chơi theo góc nhìn agent 157 160
+        temp_4_ = [9999 for i in range(4)]
+        for i in range(self.players.__len__()):
+            temp_4_[i] = self.players[i].amount_cards_remaining
+        
+        temp_4 = temp_4_[turn_id:] + temp_4_[:turn_id]
+
+        # 4 pt, tình trạng theo vòng hoặc bỏ vòng của các người chơi theo góc nhìn agent 161 164
+        temp_5_ = [0 for i in range(4)]
+        for i in self.dict_input['Playing_current_round']:
+            temp_5_[i] = 1
+
+        temp_5 = temp_5_[turn_id:] + temp_5_[:turn_id]
+
+        # Id của người chơi đang là chủ nhân của các lá bài cần chặn trên bàn 165
+        temp_6 = None
+        if self.board.turn_cards_owner == 'None':
+            temp_6 = -1
+        else:
+            for i in range(self.players.__len__()):
+                if self.players[i].name == self.board.turn_cards_owner:
+                    temp_6 = i
+                    break
+
+        return temp_1 + temp_2 + temp_3 + [turn_id] + temp_4 + temp_5 + [temp_6]
 
     def check_action(self, action_player: list):
         len_ = action_player.__len__()
