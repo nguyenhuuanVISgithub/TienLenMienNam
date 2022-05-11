@@ -74,71 +74,45 @@ class Player:
                     board_turn_cards_owner = 'NotMe123456'
                 )
 
-    def check_action(self, action_player: list):
-        len_ = action_player.__len__()
+    def check_action(self, list_card: list):
+        len_ = list_card.__len__()
         if len_ == 0:
             return 'Nothing', -1
+        
+        v_list = [i.score for i in list_card]
+        val_list = [i.stt for i in list_card]
 
-        v_list = [i.score for i in action_player]
-        val_list = [i.stt for i in action_player]
-
-        # Kiểm tra xem có 2 lá bài nào trùng hay không
+        # Kiểm tra sự trùng nhau
         temp_list = []
         for i in val_list:
             if i in temp_list:
-                # print(Fore.LIGHTRED_EX + 'Có hai thẻ bài trùng nhau: ', end='')
-                # for i in action_player:
-                #     print(Fore.RED + str(i.name) + ', ', end='')
-
-                # print(Style.RESET_ALL)
                 return 'Error_input', -7
-            
+
             temp_list.append(i)
 
-        # Kiểm tra xem các lá bài có phải của người chơi hiện tại không
-        # temp_list = [i.stt for i in self.dict_input['Turn_player_cards']]
-        # for i in val_list:
-        #     if i not in temp_list:
-        #         print(Fore.LIGHTRED_EX + 'Có ít nhất 1 thẻ bài không phải của người chơi hiện tại: ', end='')
-        #         for i in action_player:
-        #             print(Fore.RED + str(i.name) + ', ', end='')
-
-        #         print(Style.RESET_ALL)
-        #         return 'Error_input', -7
-
         if len_ == 1:
-            return 'Single', action_player[0].stt
-
+            return 'Single', list_card[0].stt
+        
         if len_ == 2:
-            if self.list_card_hand(action_player, 'Pair').__len__() != 0:
+            if self.list_card_hand(list_card, 'Pair').__len__() != 0:
                 return 'Pair', max(val_list)
-
-            #print(Fore.LIGHTRED_EX + 'Dạng bài không đúng: ', end='')
-            # for i in action_player:
-            #     print(Fore.RED + str(i.name) + ', ', end='')
-
-            # print(Style.RESET_ALL)
+        
             return 'Error_input', -7
 
         # Kiểm tra xem có phải là sảnh
         if max(v_list) - min(v_list) == (len_-1) and max(v_list) != 12:
-            if self.list_card_hand(action_player, f'{len_}_straight').__len__() != 0:
+            if self.list_card_hand(list_card, f'{len_}_straight').__len__() != 0:
                 return f'{len_}_straight', max(val_list)
-
+        
         # Kiểm tra xem có phải bộ ba hoặc tứ quý
         if max(v_list) == min(v_list):
             return f'{len_}_of_a_kind', max(val_list)
 
         # Kiểm tra dây đôi thông
         if len_ % 2 == 0 and len_ >= 6:
-            if self.list_card_hand(action_player, f'{len_//2}_pairs_straight').__len__() != 0:
+            if self.list_card_hand(list_card, f'{len_//2}_pairs_straight').__len__() != 0:
                 return f'{len_//2}_pairs_straight', max(val_list)
 
-        # print(Fore.LIGHTRED_EX + 'Dạng bài không đúng: ', end='')
-        # for i in action_player:
-        #     print(Fore.RED + str(i.name) + ', ', end='')
-
-        # print(Style.RESET_ALL)
         return 'Error_input', -7
 
     def action_space(self, list_card: list, board_turn_cards: dict, board_turn_cards_owner: str):
