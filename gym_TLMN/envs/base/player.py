@@ -21,20 +21,23 @@ class Player:
     @property
     def amount_cards_remaining(self):
         return 13 - self.__played_cards.__len__()
-    
-    def get_list_index_action(self, state: list, list_all_action_code: list):
-        action_space = self.get_action_space_from_state(state)
-        list_action_space = []
-        for key in action_space:
-            list_action_space += action_space[key]
 
-        list_action_code = []
-        for action in list_action_space:
-            hand_name = action['hand_name']
-            hand_score = action['hand_score']
-            list_action_code.append(f'{hand_name}_{hand_score}')
+    def get_list_index_action(self, state: list, list_all_action_code: list, close_game: int):
+        if close_game == -1:
+            action_space = self.get_action_space_from_state(state)
+            list_action_space = []
+            for key in action_space:
+                list_action_space += action_space[key]
 
-        return [list_all_action_code.index(action_code) for action_code in list_action_code]
+            list_action_code = []
+            for action in list_action_space:
+                hand_name = action['hand_name']
+                hand_score = action['hand_score']
+                list_action_code.append(f'{hand_name}_{hand_score}')
+
+            return [list_all_action_code.index(action_code) for action_code in list_action_code]
+        else:
+            return [0]
 
     def get_action_space_from_state(self, state: list):
         board_turn_cards_ = state[52:104]
@@ -273,7 +276,7 @@ class Player:
                             'hand_score': card.stt
                         })
 
-        return list_return
+        return list_return 
 
     def list_straight_subsequence(self, list_int: list, k: int):
         n = list_int.__len__()

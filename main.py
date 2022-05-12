@@ -9,18 +9,31 @@ def main():
     env.reset()
 
     print([i.name for i in env.players])
-    # print(list_action_code)
 
     for i in range(500):
         env.render()
 
-        o,a,done,t = env.step(0)
+        o,a,done,t = env.step(env.turn.action(env.dict_input))
         if done:
-            env.dict_input['Playing_current_round'] = [i for i in range(env.players.__len__())]
             break
-    
+
+        # input()
+
     for i in range(4):
         env.render()
-        o,a,done,t = env.step(0)
+
+        o,a,done,t = env.step(env.turn.action(env.dict_input))
 
 main()
+
+
+# self.dict_input = {
+#     'Board': self.board,
+#     'Player': self.players,
+#     'Playing_id': [i for i in range(amount_player)],
+#     'Turn_id': self.players.index(self.turn),
+#     'Turn_player_cards': [],
+#     'State': [],
+#     'Close_game': -1,
+#     'List_all_action_code': list(data_action_space['action_code'])
+# }
