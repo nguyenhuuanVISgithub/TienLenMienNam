@@ -19,7 +19,7 @@ def main():
 
         # input()
 
-    for i in range(4):
+    for i in range(env.players.__len__()):
         env.render()
 
         o,a,done,t = env.step(env.turn.action(env.dict_input))
