@@ -1,7 +1,5 @@
 import gym
 import gym_TLMN
-from pandas import read_csv
-from copy import deepcopy
 
 
 def main():
@@ -25,15 +23,3 @@ def main():
         o,a,done,t = env.step(env.turn.action(env.dict_input))
 
 main()
-
-
-# self.dict_input = {
-#     'Board': self.board,
-#     'Player': self.players,
-#     'Playing_id': [i for i in range(amount_player)],
-#     'Turn_id': self.players.index(self.turn),
-#     'Turn_player_cards': [],
-#     'State': [],
-#     'Close_game': -1,
-#     'List_all_action_code': list(data_action_space['action_code'])
-# }
